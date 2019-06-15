@@ -4,6 +4,7 @@ from train import Net
 import numpy as np
 from utils import DEVICE, CHARS
 from torchvision.transforms import functional
+import argparse
 
 
 class Predictor(object):
@@ -21,7 +22,7 @@ class Predictor(object):
 
         # normalize
         im = functional.normalize(im, [127.5, 127.5, 127.5], [128, 128, 128])
-        if self.net.device != 'cpu':  # to cpu
+        if self.net.device != 'cpu':
             im = im.to(DEVICE)
 
         with torch.no_grad():
@@ -33,8 +34,18 @@ class Predictor(object):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Predict captchas using CNN')
+
+    parser.add_argument('--path', '-p', help='Path to the captcha image',
+                        type=str, required=True)
+    parser.add_argument('--debug', help='Run in debug mode',
+                        action='store_true')
+    args = parser.parse_args()
+
     man = Predictor('pretrained')
-    path = input('Enter image path, empty to exit: ')
-    while path != '':
-        print(man.identify(path))
-        path = input('Enter image path, empty to exit: ')
+    if args.debug:
+        captcha = Image.open(args.path)
+        captcha.show()
+        print(man.identify(args.path))
+    else:
+        print("Not a valid path!")

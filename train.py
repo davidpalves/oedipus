@@ -1,12 +1,13 @@
 import os
 import torch
+import argparse
+import numpy as np
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
-import numpy as np
 from torchviz import make_dot
-from utils import load_data, DEVICE, human_time
+import torch.nn.functional as F
 from timeit import default_timer as timer
+from utils import load_data, DEVICE, human_time
 
 
 class Net(nn.Module):
@@ -32,7 +33,7 @@ class Net(nn.Module):
         x = self.pool1(x)
         x = F.relu(self.conv2(x))
         x = self.pool2(x)
-        x = x.view(-1, 48 * 6 * 27)  # flatten here
+        x = x.view(-1, 48 * 6 * 27)
         x = self.drop(x)
         x = F.relu(self.fc1(x))
         x = self.fc2(x).view(-1, 4, 19)
@@ -95,7 +96,7 @@ def fit(epochs, model, loss_func, opt, train_dl, valid_dl, verbose=None):
         patience += 1
         running_loss = 0.0
         total_nums = 0
-        model.train()  # train mode
+        model.train()
         for i, data in enumerate(train_dl):
             loss, _, _, s = loss_batch(model, loss_func, data, opt)
             if isinstance(verbose, int):
@@ -108,7 +109,7 @@ def fit(epochs, model, loss_func, opt, train_dl, valid_dl, verbose=None):
                     total_nums = 0
                     running_loss = 0.0
 
-        model.eval()  # validate mode, working for drop out layer.
+        model.eval()  # validate model, working for drop out layer.
         with torch.no_grad():
             losses, single, whole, batch_size = zip(
                 *[loss_batch(model, loss_func, data) for data in valid_dl]
@@ -132,17 +133,30 @@ def fit(epochs, model, loss_func, opt, train_dl, valid_dl, verbose=None):
             break
 
 
-def train(use_gpu=True):
+def train(use_gpu=True, epochs=40, verbose=500):
     train_dl, valid_dl = load_data(batch_size=4, split_rate=0.2, gpu=use_gpu)
     model = Net(use_gpu)
     opt = optim.Adadelta(model.parameters())
-    criterion = nn.BCELoss()  # loss function
+    criterion = nn.BCELoss()
     start = timer()
-    fit(43, model, criterion, opt, train_dl, valid_dl, 500)
+    fit(epochs, model, criterion, opt, train_dl, valid_dl, verbose)
     end = timer()
     t = human_time(start, end)
     print('Total training time using {}: {}'.format(model.device, t))
 
 
 if __name__ == '__main__':
-    train(True)
+    parser = argparse.ArgumentParser(
+        description='Neural Network to break captchas')
+
+    parser.add_argument('--epochs', help='Number of epochs to be executed',
+                        type=int)
+    parser.add_argument('--verbose', help='Show data at each N value',
+                        type=int)
+    parser.add_argument('--gpu', dest='gpu', action='store_true')
+    parser.add_argument('--gpu-false', help='forces model to run on CPU',
+                        action='store_false', dest='gpu')
+    parser.set_defaults(gpu=True)
+    args = parser.parse_args()
+
+    train(use_gpu=args.gpu, epochs=args.epochs, verbose=args.verbose)
