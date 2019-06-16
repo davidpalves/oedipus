@@ -52,4 +52,4 @@ optional arguments:
 
 ```
 
-### Based on [Skyduy](https://github.com/skyduy/CNN_keras)'s model
+Based on [Skyduy](https://github.com/skyduy/CNN_keras)'s model
